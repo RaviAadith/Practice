@@ -1,0 +1,187 @@
+My asp.net core console application which uses MailMessage that takes in From, to, subject and body and uses SmtpClient for sending emails. The body is constructed using string builder.
+
+Existing logic:
+in Main(), there are 2 methods:
+
+Method1:
+it fetches certain no of records from the request table and employee table using joins based upon the empid that we are passing using ExecuteReader(). 
+
+Then it uses while(reader.read()) to read rows one by one and then it sets the row values in local variables and calls 
+UpdateData()
+SendEmail()
+This SendEmail() creates a stringbuilder for the body of the request and uses sb.AppendLine() and then fills the details from those local variables which contains the current request id. And finally sends the mail.
+
+The same process is repeated for as many records (recordId,RoleId,RoleTitle) that are present in the while loop.
+
+
+Method2:
+It fetches some records based on different conditions, and fills the data into a datatable with recordId as primary key.
+Now for each row in DataRow, it takes the values and uses it to 
+InsertData()
+SendEmail()
+For each combination of recordId,RoleId,RoleTitle, it sends out a separate mail.
+
+
+Now the requirement is, They want only one mail sent irrespective of the number of records. 
+So they want to construct a table with all the records having rows in this table and finally to send this table in the email body;
+
+Other operations like insert or update can be taking place for each record.
+
+
+
+
+My logic:
+Consolidate Email Data:
+
+Collect all the records into a single DataTable or List during the processing of records.
+Construct an HTML table to represent the data.
+Send a Single Email:
+
+Use the consolidated HTML table as the email body.
+Update SendEmail Method:
+
+Modify it to accept an HTML string for the email body.
+Handle Insert/Update Separately:
+
+Perform InsertData or UpdateData for each record as required but do not send an email during these operations.
+
+
+CODE PRACTICE SAMPLE:
+using System;
+using System.Data;
+using System.Net.Mail;
+using System.Text;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        Method1();
+        Method2();
+    }
+
+    static void Method1()
+    {
+        // Fetch records using ExecuteReader()
+        DataTable consolidatedTable = new DataTable();
+        consolidatedTable.Columns.Add("RecordId");
+        consolidatedTable.Columns.Add("RoleId");
+        consolidatedTable.Columns.Add("RoleTitle");
+
+        using (var connection = new SqlConnection("YourConnectionString"))
+        {
+            connection.Open();
+            var command = new SqlCommand("YourQuery", connection);
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    int recordId = reader.GetInt32(0);
+                    int roleId = reader.GetInt32(1);
+                    string roleTitle = reader.GetString(2);
+
+                    // Insert or update data
+                    UpdateData(recordId, roleId, roleTitle);
+
+                    // Add to the consolidated table
+                    consolidatedTable.Rows.Add(recordId, roleId, roleTitle);
+                }
+            }
+        }
+
+        // Send a single email with the consolidated table
+        string emailBody = GenerateEmailBody(consolidatedTable);
+        SendEmail("recipient@example.com", "Subject: Consolidated Records", emailBody);
+    }
+
+    static void Method2()
+    {
+        // Fetch records and fill into DataTable
+        DataTable consolidatedTable = new DataTable();
+        consolidatedTable.Columns.Add("RecordId");
+        consolidatedTable.Columns.Add("RoleId");
+        consolidatedTable.Columns.Add("RoleTitle");
+
+        using (var connection = new SqlConnection("YourConnectionString"))
+        {
+            connection.Open();
+            var adapter = new SqlDataAdapter("YourQuery", connection);
+            DataTable fetchedData = new DataTable();
+            adapter.Fill(fetchedData);
+
+            foreach (DataRow row in fetchedData.Rows)
+            {
+                int recordId = (int)row["RecordId"];
+                int roleId = (int)row["RoleId"];
+                string roleTitle = (string)row["RoleTitle"];
+
+                // Insert data
+                InsertData(recordId, roleId, roleTitle);
+
+                // Add to the consolidated table
+                consolidatedTable.Rows.Add(recordId, roleId, roleTitle);
+            }
+        }
+
+        // Send a single email with the consolidated table
+        string emailBody = GenerateEmailBody(consolidatedTable);
+        SendEmail("recipient@example.com", "Subject: Consolidated Records", emailBody);
+    }
+
+    static void UpdateData(int recordId, int roleId, string roleTitle)
+    {
+        // Perform update operation
+    }
+
+    static void InsertData(int recordId, int roleId, string roleTitle)
+    {
+        // Perform insert operation
+    }
+
+    static string GenerateEmailBody(DataTable table)
+    {
+        var sb = new StringBuilder();
+        sb.Append("<html><body>");
+        sb.Append("<h3>Consolidated Records</h3>");
+        sb.Append("<table border='1'>");
+        sb.Append("<tr><th>RecordId</th><th>RoleId</th><th>RoleTitle</th></tr>");
+
+        foreach (DataRow row in table.Rows)
+        {
+            sb.Append("<tr>");
+            sb.Append($"<td>{row["RecordId"]}</td>");
+            sb.Append($"<td>{row["RoleId"]}</td>");
+            sb.Append($"<td>{row["RoleTitle"]}</td>");
+            sb.Append("</tr>");
+        }
+
+        sb.Append("</table>");
+        sb.Append("</body></html>");
+        return sb.ToString();
+    }
+
+    static void SendEmail(string to, string subject, string body)
+    {
+        using (var message = new MailMessage())
+        {
+            message.From = new MailAddress("your-email@example.com");
+            message.To.Add(to);
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using (var smtpClient = new SmtpClient("your-smtp-server"))
+            {
+                smtpClient.Credentials = new System.Net.NetworkCredential("your-username", "your-password");
+                smtpClient.Send(message);
+            }
+        }
+    }
+}
+
+
+Key Points:
+Consolidated Data: Both Method1 and Method2 now collect all records into a DataTable.
+HTML Email Body: The GenerateEmailBody method creates an HTML table dynamically from the DataTable.
+Single Email: Only one email is sent after processing all records.
+Insert/Update Logic: InsertData and UpdateData are still executed for each record.
