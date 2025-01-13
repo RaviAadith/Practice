@@ -1,0 +1,91 @@
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Text;
+using System.Net;
+using System.Net.Mail;
+
+class Program
+{
+    static void Main()
+    {
+        // Example list of role IDs
+        List<int> roleIds = new List<int> { 1, 2, 3, 4 };
+
+        // Connection string to your SQL Server database
+        string connectionString = "your_connection_string_here";
+
+        // Initialize StringBuilder to construct the email body
+        StringBuilder sb = new StringBuilder();
+
+        // Add introductory text
+        sb.AppendLine("Below roles have been assigned to you:");
+        
+        // Start the HTML table
+        sb.AppendLine("<table border='1' cellpadding='5' cellspacing='0'>");
+        sb.AppendLine("<tr><th>Role Title</th></tr>");
+
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            // Dynamically create the IN clause with parameterized placeholders
+            string inClause = string.Join(", ", roleIds.Select((id, index) => $"@RoleId{index}"));
+
+            // Build the SQL query
+            string query = $"SELECT RoleTitle FROM Role WHERE RoleId IN ({inClause}) AND Status = 1";
+
+            using (SqlCommand command = new SqlCommand(query, connection))
+            {
+                // Add parameters for each role ID
+                for (int i = 0; i < roleIds.Count; i++)
+                {
+                    command.Parameters.AddWithValue($"@RoleId{i}", roleIds[i]);
+                }
+
+                // Execute the query and retrieve the results
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        // Add each role title as a row in the table
+                        sb.AppendLine($"<tr><td>{reader["RoleTitle"]}</td></tr>");
+                    }
+                }
+            }
+        }
+
+        // End the HTML table
+        sb.AppendLine("</table>");
+
+        // Send email with the generated HTML content
+        SendEmail(sb.ToString());
+    }
+
+    static void SendEmail(string emailBody)
+    {
+        // Configure the email settings
+        var fromAddress = new MailAddress("your_email@example.com", "Your Name");
+        var toAddress = new MailAddress("recipient@example.com", "Recipient Name");
+        const string subject = "Assigned Roles";
+
+        var smtp = new SmtpClient
+        {
+            Host = "smtp.example.com",
+            Port = 587,
+            EnableSsl = true,
+            Credentials = new NetworkCredential("your_email@example.com", "your_email_password")
+        };
+
+        using (var message = new MailMessage(fromAddress, toAddress)
+        {
+            Subject = subject,
+            Body = emailBody,
+            IsBodyHtml = true
+        })
+        {
+            smtp.Send(message);
+        }
+    }
+}
