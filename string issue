@@ -1,40 +1,17 @@
-string SchediIds = "10854,      \n10907, \n10903"; // Example input
+// Get the value from the hidden field
+let roleIds = $("#hdnroleids").val();
 
-// Clean the string by trimming spaces and newlines
-SchediIds = SchediIds.Replace("\n", "").Replace("\r", "").Trim();
+// Clean the role IDs
+roleIds = roleIds
+  .split(",")                 // Split by comma
+  .map(id => id.trim())       // Trim whitespace and newlines from each ID
+  .filter(id => id !== "")    // Remove empty values
+  .join(",");                 // Join them back as a comma-separated string
 
-// Split the string into an array of IDs
-string[] roleIds = SchediIds.Split(',')
-                             .Where(id => !string.IsNullOrWhiteSpace(id)) // Remove empty entries
-                             .Select(id => id.Trim()) // Trim any extra spaces around the IDs
-                             .ToArray();
+// Update the hidden field with the cleaned value
+$("#hdnroleids").val(roleIds);
 
-// Create a parameterized SQL query
-string inClause = string.Join(", ", roleIds.Select((id, index) => $"@RoleId{index}"));
-string query = $"SELECT RoleTitle FROM Role WHERE RoleId IN ({inClause}) AND Status = 1";
-
-// Assuming you already have a SqlConnection (connection) open
-using (SqlCommand command = new SqlCommand(query, connection))
-{
-    // Add parameters for each role ID
-    for (int i = 0; i < roleIds.Length; i++)
-    {
-        command.Parameters.AddWithValue($"@RoleId{i}", roleIds[i]);
-    }
-
-    // Execute the query and retrieve the results
-    using (SqlDataReader reader = command.ExecuteReader())
-    {
-        while (reader.Read())
-        {
-            // Process the result (e.g., add to email body)
-            Console.WriteLine(reader["RoleTitle"].ToString());
-        }
-    }
-}
-
-
-
-
+// Log to verify
+console.log("Cleaned Role IDs:", roleIds);
 
 
