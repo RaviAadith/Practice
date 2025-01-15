@@ -1,0 +1,126 @@
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Text;
+
+public class Record
+{
+    public int RequestId { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public string Comments { get; set; }
+    public string Grantor { get; set; }
+    public string Grantee { get; set; }
+    public string Signatory { get; set; }
+    public string MailToUse { get; set; }
+    public string TransferredEmp { get; set; }
+}
+
+public class EmailSender
+{
+    // Method to simulate sending an email (this would be replaced with actual email sending logic)
+    public static void SendEmail(string recipient, string subject, string body)
+    {
+        Console.WriteLine($"Sending email to: {recipient}");
+        Console.WriteLine($"Subject: {subject}");
+        Console.WriteLine($"Body: {body}");
+        // In production, you'd use SMTP or another email service to send the email
+    }
+
+    public static void SendConsolidatedEmails(SqlDataReader reader, string empId)
+    {
+        // Dictionary to group records by MailToUse (recipient)
+        var emailGroups = new Dictionary<string, List<Record>>();
+
+        // Read records from SqlDataReader
+        while (reader.Read())
+        {
+            // Create a new Record object and populate it with data from SqlDataReader
+            var record = new Record
+            {
+                RequestId = reader.GetInt32(reader.GetOrdinal("RequestId")),
+                StartDate = reader.GetDateTime(reader.GetOrdinal("StartDate")),
+                EndDate = reader.GetDateTime(reader.GetOrdinal("EndDate")),
+                Comments = reader.GetString(reader.GetOrdinal("Comments")),
+                Grantor = reader.GetString(reader.GetOrdinal("Grantor")),
+                Grantee = reader.GetString(reader.GetOrdinal("Grantee")),
+                Signatory = reader.GetString(reader.GetOrdinal("Signatory"))
+            };
+
+            // Apply logic to set MailToUse and TransferredEmp based on conditions
+            if (empId == record.Grantor)
+            {
+                record.MailToUse = string.IsNullOrEmpty(record.Grantee) ? record.Signatory : record.Grantee;
+                record.TransferredEmp = record.Grantor;
+            }
+            else
+            {
+                record.TransferredEmp = empId == record.Signatory ? record.Signatory : record.Grantee;
+                record.MailToUse = record.Grantor;
+            }
+
+            // Add the record to the corresponding group in the dictionary
+            if (!emailGroups.ContainsKey(record.MailToUse))
+            {
+                emailGroups[record.MailToUse] = new List<Record>();
+            }
+            emailGroups[record.MailToUse].Add(record);
+        }
+
+        // Loop through each group to send consolidated emails
+        foreach (var group in emailGroups)
+        {
+            string mailToUse = group.Key;
+            List<Record> recordsForRecipient = group.Value;
+
+            // Build the email body
+            StringBuilder emailBody = new StringBuilder();
+            emailBody.AppendLine($"Hello {mailToUse},");
+            emailBody.AppendLine("Here are the details of your requests:");
+            emailBody.AppendLine("<table border='1'>");
+            emailBody.AppendLine("<tr><th>RequestId</th><th>StartDate</th><th>EndDate</th><th>Comments</th></tr>");
+
+            // Loop through each record for the recipient and add details to the email body
+            foreach (var record in recordsForRecipient)
+            {
+                emailBody.AppendLine($"<tr><td>{record.RequestId}</td><td>{record.StartDate:yyyy-MM-dd}</td><td>{record.EndDate:yyyy-MM-dd}</td><td>{record.Comments}</td></tr>");
+            }
+
+            emailBody.AppendLine("</table>");
+            emailBody.AppendLine("Regards,<br>Your Team");
+
+            // Send the email
+            SendEmail(mailToUse, "Consolidated Request Details", emailBody.ToString());
+        }
+    }
+}
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // Example SQL query
+        string connectionString = "Your_Connection_String_Here";
+        string query = "SELECT RequestId, StartDate, EndDate, Comments, Grantor, Grantee, Signatory FROM Requests WHERE EmpId = @EmpId";
+
+        // EmpId to filter the records
+        string empId = "emp101";
+
+        // Open SQL connection
+        using (SqlConnection conn = new SqlConnection(connectionString))
+        {
+            conn.Open();
+            using (SqlCommand command = new SqlCommand(query, conn))
+            {
+                command.Parameters.AddWithValue("@EmpId", empId);
+
+                // Execute the query and get a SqlDataReader
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    // Process the records and send consolidated emails
+                    EmailSender.SendConsolidatedEmails(reader, empId);
+                }
+            }
+        }
+    }
+}
