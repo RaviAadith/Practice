@@ -59,16 +59,19 @@ public class EmailSender
                             roleToUse = "Grantor";
 
                             // Choose the recipient: Grantee or Signatory
-                            string recipientEmail = record.GranteeEmail ?? record.SignatoryEmail;
-                            if (!granteeSignatoryEmails.ContainsKey(recipientEmail))
+                            string recipientEmail = record.GranteeEmail ?? record.SignatoryEmail;                                                        
+                            if (!string.IsNullOrEmpty(recipientEmail))
                             {
-                                granteeSignatoryEmails[recipientEmail] = new List<RecordDetails>();
-                            }
+                                if (!granteeSignatoryEmails.ContainsKey(recipientEmail))
+                                {
+                                    granteeSignatoryEmails[recipientEmail] = new List<RecordDetails>();
+                                }
 
-                            // Add the record with the transferredEmp and roleToUse
-                            record.TransferredEmp = transferredEmp;
-                            record.RoleToUse = roleToUse;
-                            granteeSignatoryEmails[recipientEmail].Add(record);
+                                // Add the record with the transferredEmp and roleToUse
+                                record.TransferredEmp = transferredEmp;
+                                record.RoleToUse = roleToUse;
+                                granteeSignatoryEmails[recipientEmail].Add(record);
+                            }
                         }
                         else
                         {
@@ -86,14 +89,17 @@ public class EmailSender
 
                             // Add the record with the transferredEmp and roleToUse
                             record.TransferredEmp = transferredEmp;
-                            record.RoleToUse = roleToUse;
+                            record.RoleToUse = roleToUse;                         
 
-                            if (!grantorEmails.ContainsKey(record.GrantorEmail))
+                            if (!string.IsNullOrEmpty(record.GrantorEmail))
                             {
-                                grantorEmails[record.GrantorEmail] = new List<RecordDetails>();
-                            }
+                                if (!grantorEmails.ContainsKey(record.GrantorEmail))
+                                {
+                                    grantorEmails[record.GrantorEmail] = new List<RecordDetails>();
+                                }
 
-                            grantorEmails[record.GrantorEmail].Add(record);
+                                grantorEmails[record.GrantorEmail].Add(record);
+                            }
                         }
                     }
                 }
