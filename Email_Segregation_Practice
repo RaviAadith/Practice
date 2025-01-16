@@ -1,0 +1,182 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.Text;
+
+public class EmailSender
+{
+    public void ProcessEmails()
+    {
+        List<int> empIds = new List<int> { 101, 102, 103, 104, 105 };
+
+        foreach (var empId in empIds)
+        {
+            // Read and process records for each employee
+            ReadBinding(empId);
+        }
+    }
+
+    private void ReadBinding(int empId)
+    {
+        var grantorEmails = new Dictionary<string, List<RecordDetails>>();
+        var granteeSignatoryEmails = new Dictionary<string, List<RecordDetails>>();
+
+        using (SqlConnection connection = new SqlConnection("YourConnectionString"))
+        {
+            connection.Open();
+            using (SqlCommand command = new SqlCommand("YourStoredProcedureOrQuery", connection))
+            {
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.AddWithValue("@EmpId", empId);
+
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var record = new RecordDetails
+                        {
+                            GrantorId = reader.GetInt32("GrantorId"),
+                            GrantorName = reader.GetString("GrantorName"),
+                            GrantorEmail = reader.GetString("GrantorEmail"),
+                            GranteeId = reader.GetInt32("GranteeId"),
+                            GranteeName = reader.GetString("GranteeName"),
+                            GranteeEmail = reader.GetString("GranteeEmail"),
+                            SignatoryId = reader.GetInt32("SignatoryId"),
+                            SignatoryName = reader.GetString("SignatoryName"),
+                            SignatoryEmail = reader.GetString("SignatoryEmail"),
+                            EmpId = empId
+                        };
+
+                        string transferredEmp = string.Empty;
+                        string roleToUse = string.Empty;
+
+                        // Check for Grantor email logic
+                        if (empId == record.GrantorId)
+                        {
+                            // If Grantor, send email to Grantee or Signatory
+                            transferredEmp = record.GrantorName;
+                            roleToUse = "Grantor";
+
+                            // Choose the recipient: Grantee or Signatory
+                            string recipientEmail = record.GranteeEmail ?? record.SignatoryEmail;
+                            if (!granteeSignatoryEmails.ContainsKey(recipientEmail))
+                            {
+                                granteeSignatoryEmails[recipientEmail] = new List<RecordDetails>();
+                            }
+
+                            // Add the record with the transferredEmp and roleToUse
+                            record.TransferredEmp = transferredEmp;
+                            record.RoleToUse = roleToUse;
+                            granteeSignatoryEmails[recipientEmail].Add(record);
+                        }
+                        else
+                        {
+                            // For Grantee or Signatory, send email to Grantor
+                            if (empId == record.SignatoryId)
+                            {
+                                transferredEmp = record.SignatoryName;
+                                roleToUse = "Signatory";
+                            }
+                            else
+                            {
+                                transferredEmp = record.GranteeName;
+                                roleToUse = "Subdelegate";
+                            }
+
+                            // Add the record with the transferredEmp and roleToUse
+                            record.TransferredEmp = transferredEmp;
+                            record.RoleToUse = roleToUse;
+
+                            if (!grantorEmails.ContainsKey(record.GrantorEmail))
+                            {
+                                grantorEmails[record.GrantorEmail] = new List<RecordDetails>();
+                            }
+
+                            grantorEmails[record.GrantorEmail].Add(record);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Send emails to Grantors
+        foreach (var entry in grantorEmails)
+        {
+            SendGrantorEmail(entry.Key, entry.Value);
+        }
+
+        // Send emails to Grantees/Signatories
+        foreach (var entry in granteeSignatoryEmails)
+        {
+            SendGranteeSignatoryEmail(entry.Key, entry.Value);
+        }
+    }
+
+    private void SendGrantorEmail(string recipientEmail, List<RecordDetails> records)
+    {
+        string subject = "Grantor - Summary of Records";
+        string emailBody = GenerateEmailBody(records);
+
+        // Send email
+        SendEmail(recipientEmail, subject, emailBody);
+    }
+
+    private void SendGranteeSignatoryEmail(string recipientEmail, List<RecordDetails> records)
+    {
+        string subject = "Grantee/Signatory - Summary of Records";
+        string emailBody = GenerateEmailBody(records);
+
+        // Send email
+        SendEmail(recipientEmail, subject, emailBody);
+    }
+
+    private string GenerateEmailBody(List<RecordDetails> records)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.Append("<table border='1'>");
+        sb.Append("<tr><th>Grantor Name</th><th>Grantee Name</th><th>Signatory Name</th><th>Transferred Emp</th><th>Role</th></tr>");
+
+        foreach (var record in records)
+        {
+            sb.Append("<tr>");
+            sb.Append($"<td>{record.GrantorName}</td>");
+            sb.Append($"<td>{record.GranteeName}</td>");
+            sb.Append($"<td>{record.SignatoryName}</td>");
+            sb.Append($"<td>{record.TransferredEmp}</td>");
+            sb.Append($"<td>{record.RoleToUse}</td>");
+            sb.Append("</tr>");
+        }
+
+        sb.Append("</table>");
+        return sb.ToString();
+    }
+
+    private void SendEmail(string recipientEmail, string subject, string body)
+    {
+        // Implement your email sending logic here (e.g., using SMTP or an email service)
+        Console.WriteLine($"Sending email to {recipientEmail}");
+        Console.WriteLine($"Subject: {subject}");
+        Console.WriteLine($"Body: {body}");
+    }
+}
+
+public class RecordDetails
+{
+    public int EmpId { get; set; }
+    public int GrantorId { get; set; }
+    public string GrantorName { get; set; }
+    public string GrantorEmail { get; set; }
+    public int GranteeId { get; set; }
+    public string GranteeName { get; set; }
+    public string GranteeEmail { get; set; }
+    public int SignatoryId { get; set; }
+    public string SignatoryName { get; set; }
+    public string SignatoryEmail { get; set; }
+    public string TransferredEmp { get; set; }
+    public string RoleToUse { get; set; }
+}
+
+
+
+Practice dictionary
