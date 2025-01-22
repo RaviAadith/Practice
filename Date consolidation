@@ -1,113 +1,102 @@
-public void ProcessAndSendEmails(List<Record> records)
-{
-    // Dictionaries to group emails and their corresponding records
-    var grantorEmails = new Dictionary<string, List<Record>>();
-    var granteeSignatoryEmails = new Dictionary<string, List<Record>>();
 
-    // Populate the dictionaries
-    foreach (var record in records)
+
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+public class Program
+{
+    public static void Main()
     {
-        if (!string.IsNullOrEmpty(record.GrantorEmail))
+        // Sample data
+        var requests = new List<Request>
         {
-            // Populate grantee/signatory emails dictionary
-            if (record.EmpId == record.GrantorId)
+            new Request { ReqId = 1, GrantorMail = "grantor1@example.com", GranteeMail = "grantee1@example.com", ReqDetails = "Request 1 Details", ReqEndDate = DateTime.Now.AddDays(5) },
+            new Request { ReqId = 2, GrantorMail = "grantor1@example.com", GranteeMail = "grantee2@example.com", ReqDetails = "Request 2 Details", ReqEndDate = DateTime.Now.AddDays(10) },
+            new Request { ReqId = 3, GrantorMail = "grantor2@example.com", GranteeMail = "grantee1@example.com", ReqDetails = "Request 3 Details", ReqEndDate = DateTime.Now.AddDays(15) }
+        };
+
+        ConsolidateAndSendEmailsUsingDictionaries(requests);
+    }
+
+    public static void ConsolidateAndSendEmailsUsingDictionaries(List<Request> requests)
+    {
+        // Dictionary for grantors
+        var grantorDictionary = new Dictionary<string, List<int>>();
+        // Dictionary for grantees
+        var granteeDictionary = new Dictionary<string, List<int>>();
+
+        // Populate dictionaries
+        foreach (var request in requests)
+        {
+            // Check and group by GrantorMail
+            if (!string.IsNullOrEmpty(request.GrantorMail))
             {
-                if (!granteeSignatoryEmails.ContainsKey(record.GrantorEmail))
+                if (!grantorDictionary.ContainsKey(request.GrantorMail))
                 {
-                    granteeSignatoryEmails[record.GrantorEmail] = new List<Record>();
+                    grantorDictionary[request.GrantorMail] = new List<int>();
                 }
-                granteeSignatoryEmails[record.GrantorEmail].Add(record);
+                grantorDictionary[request.GrantorMail].Add(request.ReqId);
             }
-            else
+
+            // Check and group by GranteeMail
+            if (!string.IsNullOrEmpty(request.GranteeMail))
             {
-                // Populate grantor emails dictionary
-                if (!grantorEmails.ContainsKey(record.GrantorEmail))
+                if (!granteeDictionary.ContainsKey(request.GranteeMail))
                 {
-                    grantorEmails[record.GrantorEmail] = new List<Record>();
+                    granteeDictionary[request.GranteeMail] = new List<int>();
                 }
-                grantorEmails[record.GrantorEmail].Add(record);
+                granteeDictionary[request.GranteeMail].Add(request.ReqId);
             }
         }
-    }
 
-    // Process and send emails for Grantor Emails
-    if (grantorEmails.Any())
-    {
-        foreach (var entry in grantorEmails)
+        // Send emails to grantors
+        if (grantorDictionary.Any())
         {
-            if (entry.Value.Any())
+            foreach (var grantor in grantorDictionary)
             {
-                SendGrantorEmail(entry.Key, entry.Value);
+                if (grantor.Value.Any()) // Ensure there are requests for this grantor
+                {
+                    var emailBody = $"Dear {grantor.Key},\n\nHere are the request IDs where you are the grantor:\n";
+                    emailBody += string.Join(", ", grantor.Value);
+                    SendEmail(grantor.Key, "Your Consolidated Request IDs as Grantor", emailBody);
+                }
             }
         }
-    }
 
-    // Process and send emails for Grantee/Signatory Emails
-    if (granteeSignatoryEmails.Any())
-    {
-        foreach (var entry in granteeSignatoryEmails)
+        // Send emails to grantees
+        if (granteeDictionary.Any())
         {
-            if (entry.Value.Any())
+            foreach (var grantee in granteeDictionary)
             {
-                SendGranteeSignatoryEmail(entry.Key, entry.Value);
+                if (grantee.Value.Any()) // Ensure there are requests for this grantee
+                {
+                    var emailBody = $"Dear {grantee.Key},\n\nHere are the request IDs where you are the grantee:\n";
+                    emailBody += string.Join(", ", grantee.Value);
+                    SendEmail(grantee.Key, "Your Consolidated Request IDs as Grantee", emailBody);
+                }
             }
         }
     }
-}
 
-// Method to send grantor emails
-private void SendGrantorEmail(string email, List<Record> records)
-{
-    // Construct email body
-    var emailBody = ConstructEmailBody(records);
-
-    // Send email
-    EmailService.SendEmail(email, "Grantor Notification", emailBody);
-}
-
-// Method to send grantee/signatory emails
-private void SendGranteeSignatoryEmail(string email, List<Record> records)
-{
-    // Construct email body
-    var emailBody = ConstructEmailBody(records);
-
-    // Send email
-    EmailService.SendEmail(email, "Grantee/Signatory Notification", emailBody);
-}
-
-// Method to construct email body
-private string ConstructEmailBody(List<Record> records)
-{
-    var sb = new StringBuilder();
-    sb.AppendLine("Dear Recipient,");
-    sb.AppendLine("Here are the details:");
-
-    foreach (var record in records)
+    // Mock email sender function
+    public static void SendEmail(string recipient, string subject, string body)
     {
-        sb.AppendLine($"- Record ID: {record.Id}, Details: {record.Details}");
-    }
-
-    sb.AppendLine("Thank you.");
-    return sb.ToString();
-}
-
-// Sample EmailService (Mocked for demonstration)
-public static class EmailService
-{
-    public static void SendEmail(string to, string subject, string body)
-    {
-        Console.WriteLine($"Sending email to: {to}");
+        Console.WriteLine($"Sending email to: {recipient}");
         Console.WriteLine($"Subject: {subject}");
-        Console.WriteLine($"Body: {body}");
+        Console.WriteLine($"Body:\n{body}");
     }
 }
 
-// Sample Record class
-public class Record
+// Request class to represent the data model
+public class Request
 {
-    public int Id { get; set; }
-    public string GrantorEmail { get; set; }
-    public int GrantorId { get; set; }
-    public int EmpId { get; set; }
-    public string Details { get; set; }
+    public int ReqId { get; set; }
+    public string GrantorMail { get; set; }
+    public string GranteeMail { get; set; }
+    public string ReqDetails { get; set; }
+    public DateTime ReqEndDate { get; set; }
 }
