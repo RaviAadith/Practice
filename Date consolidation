@@ -1,0 +1,113 @@
+public void ProcessAndSendEmails(List<Record> records)
+{
+    // Dictionaries to group emails and their corresponding records
+    var grantorEmails = new Dictionary<string, List<Record>>();
+    var granteeSignatoryEmails = new Dictionary<string, List<Record>>();
+
+    // Populate the dictionaries
+    foreach (var record in records)
+    {
+        if (!string.IsNullOrEmpty(record.GrantorEmail))
+        {
+            // Populate grantee/signatory emails dictionary
+            if (record.EmpId == record.GrantorId)
+            {
+                if (!granteeSignatoryEmails.ContainsKey(record.GrantorEmail))
+                {
+                    granteeSignatoryEmails[record.GrantorEmail] = new List<Record>();
+                }
+                granteeSignatoryEmails[record.GrantorEmail].Add(record);
+            }
+            else
+            {
+                // Populate grantor emails dictionary
+                if (!grantorEmails.ContainsKey(record.GrantorEmail))
+                {
+                    grantorEmails[record.GrantorEmail] = new List<Record>();
+                }
+                grantorEmails[record.GrantorEmail].Add(record);
+            }
+        }
+    }
+
+    // Process and send emails for Grantor Emails
+    if (grantorEmails.Any())
+    {
+        foreach (var entry in grantorEmails)
+        {
+            if (entry.Value.Any())
+            {
+                SendGrantorEmail(entry.Key, entry.Value);
+            }
+        }
+    }
+
+    // Process and send emails for Grantee/Signatory Emails
+    if (granteeSignatoryEmails.Any())
+    {
+        foreach (var entry in granteeSignatoryEmails)
+        {
+            if (entry.Value.Any())
+            {
+                SendGranteeSignatoryEmail(entry.Key, entry.Value);
+            }
+        }
+    }
+}
+
+// Method to send grantor emails
+private void SendGrantorEmail(string email, List<Record> records)
+{
+    // Construct email body
+    var emailBody = ConstructEmailBody(records);
+
+    // Send email
+    EmailService.SendEmail(email, "Grantor Notification", emailBody);
+}
+
+// Method to send grantee/signatory emails
+private void SendGranteeSignatoryEmail(string email, List<Record> records)
+{
+    // Construct email body
+    var emailBody = ConstructEmailBody(records);
+
+    // Send email
+    EmailService.SendEmail(email, "Grantee/Signatory Notification", emailBody);
+}
+
+// Method to construct email body
+private string ConstructEmailBody(List<Record> records)
+{
+    var sb = new StringBuilder();
+    sb.AppendLine("Dear Recipient,");
+    sb.AppendLine("Here are the details:");
+
+    foreach (var record in records)
+    {
+        sb.AppendLine($"- Record ID: {record.Id}, Details: {record.Details}");
+    }
+
+    sb.AppendLine("Thank you.");
+    return sb.ToString();
+}
+
+// Sample EmailService (Mocked for demonstration)
+public static class EmailService
+{
+    public static void SendEmail(string to, string subject, string body)
+    {
+        Console.WriteLine($"Sending email to: {to}");
+        Console.WriteLine($"Subject: {subject}");
+        Console.WriteLine($"Body: {body}");
+    }
+}
+
+// Sample Record class
+public class Record
+{
+    public int Id { get; set; }
+    public string GrantorEmail { get; set; }
+    public int GrantorId { get; set; }
+    public int EmpId { get; set; }
+    public string Details { get; set; }
+}
