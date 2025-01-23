@@ -1,37 +1,46 @@
 static async Task<string> FetchDetailedRecords(string connectionString, List<int> recordIds)
 {
-    // Create a comma-separated string of RecordIds
-    string recordIdsString = string.Join(",", recordIds);
-
-    // SQL query with parameterized IN clause
-    string query = $"SELECT RecordId, Details FROM Records WHERE RecordId IN ({recordIdsString})";
-
-    // Use SqlDataAdapter to fetch data into a DataSet
-    using (var myConn = new SqlConnection(connectionString))
+    using (SqlConnection myConn = new SqlConnection(connectionString))
     {
         await myConn.OpenAsync();
-        using (var myAdapter = new SqlDataAdapter())
+
+        // Dynamically create parameter placeholders for the IN clause
+        string inClause = string.Join(", ", recordIds.Select((id, index) => $"@RecordId{index}"));
+
+        // SQL query with parameterized IN clause
+        string MySql = $"SELECT RecordId, Details FROM Records WHERE RecordId IN ({inClause})";
+
+        SqlCommand myCommand = new SqlCommand(MySql, myConn);
+
+        // Add parameters to the command
+        for (int i = 0; i < recordIds.Count; i++)
         {
-            using (var myCommand = new SqlCommand(query, myConn))
-            {
-                myAdapter.SelectCommand = myCommand;
-
-                // Populate DataSet
-                var ds = new DataSet();
-                myAdapter.Fill(ds);
-
-                // Build the result string
-                var sb = new StringBuilder();
-                foreach (DataRow dr in ds.Tables[0].Rows)
-                {
-                    int recordId = Convert.ToInt32(dr["RecordId"]);
-                    string details = dr["Details"] as string;
-
-                    sb.AppendLine($"RecordId: {recordId}, Details: {details}");
-                }
-
-                return sb.ToString();
-            }
+            myCommand.Parameters.AddWithValue($"@RecordId{i}", recordIds[i]);
         }
+
+        SqlDataAdapter myAdapter2 = new SqlDataAdapter
+        {
+            SelectCommand = myCommand
+        };
+
+        DataSet ds2 = new DataSet();
+        myAdapter2.Fill(ds2);
+
+        myConn.Close();
+
+        // Build the string for the records
+        StringBuilder sb = new StringBuilder();
+        foreach (DataRow dr in ds2.Tables[0].Rows)
+        {
+            sb.AppendLine($"RecordId: {dr["RecordId"]}, Details: {dr["Details"]}");
+        }
+
+        return sb.ToString();
     }
 }
+
+
+
+
+
+
