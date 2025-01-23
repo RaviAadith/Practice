@@ -1,0 +1,165 @@
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        string connectionString = "YourConnectionStringHere";
+
+        // Dictionaries to group record IDs by recipient
+        var mailToUseGroups = new Dictionary<string, List<int>>();
+        var grantorMailGroups = new Dictionary<string, List<int>>();
+
+        // Step 1: Fetch records expiring within the next 20 days
+        using (var connection = new SqlConnection(connectionString))
+        {
+            await connection.OpenAsync();
+            var command = new SqlCommand("SELECT RecordId, GranteeName, SignatoryMail, GranteeMail, GrantorMail FROM Requests WHERE ExpiryDate <= DATEADD(DAY, 20, GETDATE())", connection);
+
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                {
+                    int recordId = reader.GetInt32("RecordId");
+                    string granteeName = reader["GranteeName"] as string;
+                    string signatoryMail = reader["SignatoryMail"] as string;
+                    string granteeMail = reader["GranteeMail"] as string;
+                    string grantorMail = reader["GrantorMail"] as string;
+
+                    // Determine MailToUse
+                    string mailToUse = granteeName == null ? signatoryMail : granteeMail;
+
+                    // Group by MailToUse
+                    if (!string.IsNullOrEmpty(mailToUse))
+                    {
+                        if (!mailToUseGroups.ContainsKey(mailToUse))
+                            mailToUseGroups[mailToUse] = new List<int>();
+                        mailToUseGroups[mailToUse].Add(recordId);
+                    }
+
+                    // Group by GrantorMail
+                    if (!string.IsNullOrEmpty(grantorMail))
+                    {
+                        if (!grantorMailGroups.ContainsKey(grantorMail))
+                            grantorMailGroups[grantorMail] = new List<int>();
+                        grantorMailGroups[grantorMail].Add(recordId);
+                    }
+                }
+            }
+        }
+
+        // Step 2: Process groups and send emails
+        if (mailToUseGroups.Any())
+        {
+            foreach (var kvp in mailToUseGroups)
+            {
+                if (kvp.Value.Any()) // Check if the list of record IDs has any entries
+                {
+                    await ProcessAndSendEmail(connectionString, kvp.Key, kvp.Value, "MailToUse");
+                }
+            }
+        }
+
+        if (grantorMailGroups.Any())
+        {
+            foreach (var kvp in grantorMailGroups)
+            {
+                if (kvp.Value.Any()) // Check if the list of record IDs has any entries
+                {
+                    await ProcessAndSendEmail(connectionString, kvp.Key, kvp.Value, "GrantorMail");
+                }
+            }
+        }
+    }
+
+    static async Task ProcessAndSendEmail(string connectionString, string recipientEmail, List<int> recordIds, string recipientType)
+    {
+        var records = await FetchDetailedRecords(connectionString, recordIds);
+
+        // Initialize the StringBuilder for email content
+        StringBuilder emailContent = new StringBuilder();
+        emailContent.AppendLine("<html><body>");
+        emailContent.AppendLine("<h3>Details of Records</h3>");
+        emailContent.AppendLine("<table border='1'><tr><th>RecordId</th><th>Details</th></tr>");
+
+        // Build the table rows for the records
+        foreach (var record in records)
+        {
+            emailContent.AppendLine($"<tr><td>{record.RecordId}</td><td>{record.Details}</td></tr>");
+        }
+
+        emailContent.AppendLine("</table>");
+        emailContent.AppendLine("</body></html>");
+
+        // Send the email
+        await SendEmail("from@example.com", recipientEmail, $"Subject: {recipientType} Notification", emailContent);
+
+        // Update the record to mark it as notified
+        foreach (var recordId in recordIds)
+        {
+            await UpdateBinding(recordId);
+        }
+    }
+
+    static async Task<List<Record>> FetchDetailedRecords(string connectionString, List<int> recordIds)
+    {
+        var records = new List<Record>();
+
+        // Create a comma-separated string of record IDs
+        string recordIdsString = string.Join(",", recordIds);
+
+        using (var connection = new SqlConnection(connectionString))
+        {
+            await connection.OpenAsync();
+            var command = new SqlCommand(
+                "SELECT RecordId, Details FROM Records WHERE RecordId IN (@RecordIds)", connection);
+
+            // Use parameterized query to prevent SQL Injection
+            command.Parameters.AddWithValue("@RecordIds", recordIdsString);
+
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                {
+                    var record = new Record
+                    {
+                        RecordId = reader.GetInt32("RecordId"),
+                        Details = reader["Details"] as string
+                    };
+                    records.Add(record);
+                }
+            }
+        }
+
+        return records;
+    }
+
+    static async Task SendEmail(string from, string to, string subject, StringBuilder body)
+    {
+        // This is a placeholder for the email sending logic
+        Console.WriteLine($"Sending email to {to} with subject '{subject}'");
+        Console.WriteLine($"Body: {body}");
+        await Task.CompletedTask;
+    }
+
+    static async Task UpdateBinding(int recordId)
+    {
+        // Placeholder for the logic to update the EMailNotify column
+        Console.WriteLine($"Updating record {recordId} to mark as notified.");
+        await Task.CompletedTask;
+    }
+}
+
+public class Record
+{
+    public int RecordId { get; set; }
+    public string Details { get; set; }
+}
+
+
+
