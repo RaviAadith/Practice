@@ -1,4 +1,4 @@
-static async Task<string> FetchDetailedRecords(string connectionString, List<int> recordIds)
+static async Task<string> FetchDetailedRecords(string connectionString, List<string> recordIds)
 {
     using (SqlConnection myConn = new SqlConnection(connectionString))
     {
@@ -38,6 +38,12 @@ static async Task<string> FetchDetailedRecords(string connectionString, List<int
         return sb.ToString();
     }
 }
+
+
+
+
+
+
 
 
 
