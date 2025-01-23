@@ -1,0 +1,37 @@
+static async Task<string> FetchDetailedRecords(string connectionString, List<int> recordIds)
+{
+    // Create a comma-separated string of RecordIds
+    string recordIdsString = string.Join(",", recordIds);
+
+    // SQL query with parameterized IN clause
+    string query = $"SELECT RecordId, Details FROM Records WHERE RecordId IN ({recordIdsString})";
+
+    // Use SqlDataAdapter to fetch data into a DataSet
+    using (var myConn = new SqlConnection(connectionString))
+    {
+        await myConn.OpenAsync();
+        using (var myAdapter = new SqlDataAdapter())
+        {
+            using (var myCommand = new SqlCommand(query, myConn))
+            {
+                myAdapter.SelectCommand = myCommand;
+
+                // Populate DataSet
+                var ds = new DataSet();
+                myAdapter.Fill(ds);
+
+                // Build the result string
+                var sb = new StringBuilder();
+                foreach (DataRow dr in ds.Tables[0].Rows)
+                {
+                    int recordId = Convert.ToInt32(dr["RecordId"]);
+                    string details = dr["Details"] as string;
+
+                    sb.AppendLine($"RecordId: {recordId}, Details: {details}");
+                }
+
+                return sb.ToString();
+            }
+        }
+    }
+}
