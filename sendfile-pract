@@ -1,0 +1,105 @@
+using System;
+using System.Configuration;
+using System.Data.SqlClient;
+using System.IO;
+using System.Text;
+using Renci.SshNet;
+
+class Program
+{
+    static void Main()
+    {
+        try
+        {
+            // Read the connection string from app.config
+            string dbConnectionStringKey = "MyDatabase"; 
+            string dbConnectionString = ConfigurationManager.ConnectionStrings[dbConnectionStringKey]?.ConnectionString;
+
+            if (string.IsNullOrEmpty(dbConnectionString))
+            {
+                Console.WriteLine($"Error: Connection string '{dbConnectionStringKey}' not found in app.config.");
+                return;
+            }
+
+            Console.WriteLine($"Using Database Connection String: {dbConnectionString}");
+
+            // Read ExportFile from app.config
+            string exportFilePath = ConfigurationManager.AppSettings["ExportFile"];
+
+            if (string.IsNullOrEmpty(exportFilePath))
+            {
+                Console.WriteLine("Error: ExportFile path is missing in app.config.");
+                return;
+            }
+
+            Console.WriteLine($"Export File: {exportFilePath}");
+
+            // Fetch data from the database and write to a file
+            StringBuilder sb = new StringBuilder();
+            using (SqlConnection conn = new SqlConnection(dbConnectionString))
+            {
+                conn.Open();
+                string query = "SELECT Column1, Column2 FROM YourTable";  // Modify as needed
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        sb.AppendLine($"{reader["Column1"]},{reader["Column2"]}");
+                    }
+                }
+            }
+
+            // Delete old file if exists and write new data
+            if (File.Exists(exportFilePath))
+                File.Delete(exportFilePath);
+
+            File.WriteAllText(exportFilePath, sb.ToString());
+
+            Console.WriteLine($"File created: {exportFilePath}");
+
+            // Read SFTP credentials from app.config
+            string sftpHost = ConfigurationManager.AppSettings["SFTP_Host"];
+            string sftpUsername = ConfigurationManager.AppSettings["SFTP_User"];
+            string sftpPassword = ConfigurationManager.AppSettings["SFTP_Password"];
+            string remotePath = ConfigurationManager.AppSettings["SFTP_RemotePath"];
+
+            // Transfer the file via SFTP
+            SendFile(exportFilePath, sftpHost, sftpUsername, sftpPassword, remotePath);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error: " + ex.Message);
+        }
+    }
+
+    static void SendFile(string localFilePath, string sftpHost, string username, string password, string remotePath)
+    {
+        using (var sftp = new SftpClient(sftpHost, username, password))
+        {
+            try
+            {
+                sftp.BufferSize = (1024 * 8) - 100;
+                sftp.Connect();
+
+                using (var fileStream = File.OpenRead(localFilePath))
+                {
+                    string remoteFilePath = Path.Combine(remotePath, Path.GetFileName(localFilePath)).Replace("\\", "/");
+                    sftp.UploadFile(fileStream, remoteFilePath);
+                }
+
+                Console.WriteLine("File uploaded successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("SFTP Error: " + ex.Message);
+            }
+            finally
+            {
+                if (sftp.IsConnected)
+                    sftp.Disconnect();
+            }
+        }
+    }
+}
