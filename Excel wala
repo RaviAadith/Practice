@@ -1,0 +1,162 @@
+void BulkApproval(List<Request> requests)
+{
+    // Dictionary to consolidate emails for SendMail() and SendSignatoryMail()
+    Dictionary<string, List<int>> sendMailDict = new Dictionary<string, List<int>>();
+    Dictionary<string, List<int>> sendSignatoryMailDict = new Dictionary<string, List<int>>();
+
+    foreach (var request in requests)
+    {
+        // Mark request as approved
+        UpdateRequestAsApproved(request.RequestID);
+
+        // Consolidate emails by recipient
+        switch (request.DType)
+        {
+            case "A":
+                AddToDictionary(sendMailDict, request.Grantor, request.RequestID);
+                AddToDictionary(sendMailDict, request.Grantee, request.RequestID);
+                AddToDictionary(sendMailDict, request.CommonMail, request.RequestID);
+                break;
+            case "B":
+                AddToDictionary(sendMailDict, request.Grantor, request.RequestID);
+                AddToDictionary(sendMailDict, request.Grantee, request.RequestID);
+                AddToDictionary(sendMailDict, request.Requester, request.RequestID);
+                AddToDictionary(sendMailDict, request.CommonMail, request.RequestID);
+                break;
+            case "C":
+                AddToDictionary(sendSignatoryMailDict, request.Grantor, request.RequestID);
+                AddToDictionary(sendSignatoryMailDict, request.Signatory, request.RequestID);
+                AddToDictionary(sendSignatoryMailDict, request.CommonMail, request.RequestID);
+                break;
+            case "D":
+                AddToDictionary(sendSignatoryMailDict, request.Grantor, request.RequestID);
+                AddToDictionary(sendSignatoryMailDict, request.Requester, request.RequestID);
+                AddToDictionary(sendSignatoryMailDict, request.Signatory, request.RequestID);
+                AddToDictionary(sendSignatoryMailDict, request.CommonMail, request.RequestID);
+                break;
+        }
+    }
+
+    // Send consolidated emails
+    foreach (var entry in sendMailDict)
+    {
+        SendMail(entry.Key, entry.Value);
+    }
+
+    foreach (var entry in sendSignatoryMailDict)
+    {
+        SendSignatoryMail(entry.Key, entry.Value);
+    }
+}
+
+
+
+
+
+
+void AddToDictionary(Dictionary<string, List<int>> dict, string email, int requestId)
+{
+    if (string.IsNullOrWhiteSpace(email)) return; // Skip if email is null/empty
+
+    if (!dict.ContainsKey(email))
+    {
+        dict[email] = new List<int>();
+    }
+    dict[email].Add(requestId);
+}
+
+
+
+
+void SendMail(string email, List<int> requestIds)
+{
+    StringBuilder emailBody = new StringBuilder();
+    emailBody.AppendLine("Dear User,");
+    emailBody.AppendLine("Please find the attached CSV file containing request details.");
+    emailBody.AppendLine("");
+    emailBody.AppendLine("Best Regards,");
+    emailBody.AppendLine("Your Team");
+
+    string csvAttachment = PrepareCSVForSendMail(requestIds); // Generate CSV content
+
+    // Logic to send email with emailBody.ToString() as content and csvAttachment as attachment.
+    Console.WriteLine($"Sending regular email to {email} with CSV.");
+}
+
+
+void SendSignatoryMail(string email, List<int> requestIds)
+{
+    StringBuilder emailBody = new StringBuilder();
+    emailBody.AppendLine("Dear Signatory,");
+    emailBody.AppendLine("Please find the attached CSV file with request details.");
+    emailBody.AppendLine("");
+    emailBody.AppendLine("Best Regards,");
+    emailBody.AppendLine("Your Team");
+
+    string csvAttachment = PrepareCSVForSignatoryMail(requestIds); // Generate CSV content
+
+    // Logic to send email with emailBody.ToString() as content and csvAttachment as attachment.
+    Console.WriteLine($"Sending signatory email to {email} with CSV.");
+}
+
+
+
+string PrepareCSVForSendMail(List<int> requestIds)
+{
+    StringBuilder csv = new StringBuilder();
+    csv.AppendLine("RequestID, Column2, Column3, Column4"); // CSV headers
+
+    using (SqlConnection conn = new SqlConnection(Connstring))
+    {
+        conn.Open();
+
+        string query = $"SELECT RequestID, Column2, Column3, Column4 FROM RequestTable WHERE RequestID IN ({string.Join(",", requestIds)})";
+        using (SqlCommand cmd = new SqlCommand(query, conn))
+        {
+            using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
+            {
+                DataTable dt = new DataTable();
+                adapter.Fill(dt);
+
+                foreach (DataRow row in dt.Rows)
+                {
+                    csv.AppendLine($"{row["RequestID"]}, {row["Column2"]}, {row["Column3"]}, {row["Column4"]}");
+                }
+            }
+        }
+    }
+    return csv.ToString();
+}
+
+
+
+string PrepareCSVForSignatoryMail(List<int> requestIds)
+{
+    StringBuilder csv = new StringBuilder();
+    csv.AppendLine("RequestID, SignatoryCol1, SignatoryCol2, SignatoryCol3"); // CSV headers
+
+    using (SqlConnection conn = new SqlConnection(Connstring))
+    {
+        conn.Open();
+
+        string query = $"SELECT RequestID, SignatoryCol1, SignatoryCol2, SignatoryCol3 FROM SignatoryTable WHERE RequestID IN ({string.Join(",", requestIds)})";
+        using (SqlCommand cmd = new SqlCommand(query, conn))
+        {
+            using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
+            {
+                DataTable dt = new DataTable();
+                adapter.Fill(dt);
+
+                foreach (DataRow row in dt.Rows)
+                {
+                    csv.AppendLine($"{row["RequestID"]}, {row["SignatoryCol1"]}, {row["SignatoryCol2"]}, {row["SignatoryCol3"]}");
+                }
+            }
+        }
+    }
+    return csv.ToString();
+}
+
+
+
+
