@@ -1,0 +1,38 @@
+public string PrepareCSVForEmail(HashSet<int> recIds)
+{
+    StringBuilder csv = new StringBuilder();
+    csv.AppendLine("RequestId,Col1,Col2,Col3");  // CSV Header
+
+    string query = "SELECT RequestId, Col1, Col2, Col3 FROM YourTable WHERE RequestId = @RequestId";
+
+    using (SqlConnection conn = new SqlConnection(connStr))
+    {
+        conn.Open();
+
+        using (SqlCommand cmd = new SqlCommand(query, conn))
+        {
+            cmd.Parameters.Add("@RequestId", SqlDbType.Int);
+
+            using (SqlDataAdapter adapter = new SqlDataAdapter(cmd))
+            {
+                // Loop through the request IDs
+                foreach (int recId in recIds)
+                {
+                    cmd.Parameters["@RequestId"].Value = recId;
+
+                    DataTable dt = new DataTable();
+                    adapter.Fill(dt);  // Fetch data for the current recId
+
+                    // Loop through the rows and append them to the CSV
+                    foreach (DataRow dr in dt.Rows)
+                    {
+                        csv.AppendLine(
+                            $"{dr["RequestId"]},{dr["Col1"]},{dr["Col2"]},{dr["Col3"]}");
+                    }
+                }
+            }
+        }
+    }
+
+    return csv.ToString();  // Return the CSV as a string
+}
