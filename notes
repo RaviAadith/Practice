@@ -1,0 +1,16 @@
+January Release – Completed User Stories for DOA Application  
+
+1. Fix Duplicate Expiring Notifications  
+   - Previously, approvers continued receiving notification emails for expiring requests (within 20 days) even after approval. This issue has been resolved.  
+
+2. Consolidate Emails for Terminated Users  
+   - Instead of sending separate notifications for each role, managers now receive a single email summarizing all roles held by a terminated user.  
+
+3. Fix Request Renewal Issue  
+   - Resolved a system issue where request renewal in the DOA application was unresponsive and stuck on loading.  
+
+4. Bulk Sub-Delegation Approval Email Consolidation  
+   - When delegates approve multiple requests in bulk, all approvals are now consolidated into a single email instead of generating separate emails for each request.  
+
+5. UI Text Update  
+   - Implemented a minor text change on the DOA application homepage.  
