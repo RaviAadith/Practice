@@ -49,3 +49,21 @@ February Release – Completed User Stories for DOA Application
 
 4. New Console Application for Sync Activity  
    - Developed a console application to automate the process of sending user and role data for synchronization. This improves data consistency, reduces manual effort, and enhances system reliability for syncing user roles across platforms.  
+
+
+
+March Release – Completed User Stories for DOA Application  
+
+1. Ability to Search Using Schedule ID  
+   - Implemented a new field on the update schedule page that allows users to search using the schedule ID. This enhancement improves efficiency by enabling direct access to schedules without relying on other parameters. Users can now enter a specific schedule ID and retrieve the corresponding schedule instantly, streamlining the search process and reducing time spent navigating through records.  
+
+2. Additional Information in SSRS Report  
+   - Enhanced the SSRS report by including additional details to improve data visibility and reporting accuracy. These new data points provide more comprehensive insights, making it easier for stakeholders to analyze key information and make informed decisions. The improved report structure enhances readability, ensuring that critical details are clearly presented for better decision-making.  
+
+3. Fixed Filter Issue for Users with Lead Roles  
+   - Resolved an issue where the filter functionality was not working correctly for users with lead roles. Previously, these users experienced difficulties when trying to refine search results based on specific criteria. The fix ensures that lead users can now apply filters without any issues, allowing for a seamless experience when managing requests and approvals.  
+
+4. Fixed Bulk Auto-Approval of Requests  
+   - Addressed a problem where bulk auto-approval of requests was not functioning as expected. This issue prevented multiple requests from being processed simultaneously, requiring users to approve them manually. The fix restores the intended functionality, allowing bulk approvals to be executed efficiently, reducing manual workload, and improving overall processing speed.  
+
+These enhancements improve user experience, efficiency, and system reliability within the DOA application.  
