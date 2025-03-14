@@ -33,3 +33,19 @@ January Release – Completed User Stories for DOA Application
 
 5. UI Text Update
    - Minor text change on the DOA homepage implemented.
+
+
+
+February Release – Completed User Stories for DOA Application  
+
+1. Search Filter for Pending Sub-Delegations  
+   - Added a search filter to the pending sub-delegations page, allowing users to quickly find and manage specific requests. This improves usability and efficiency in handling sub-delegation requests.  
+
+2. Consolidated Notifications for Departing Employees  
+   - When an employee leaves the company, all request-related notifications are now combined into a single email. This email includes details of all associated requests, reducing email clutter and improving communication clarity.  
+
+3. Optimized Expiring Request Notifications for Delegates  
+   - Delegates now receive one notification per day summarizing all expiring requests, instead of multiple separate emails for each request. This reduces inbox overload while ensuring all necessary information is provided in a streamlined format.  
+
+4. New Console Application for Sync Activity  
+   - Developed a console application to automate the process of sending user and role data for synchronization. This improves data consistency, reduces manual effort, and enhances system reliability for syncing user roles across platforms.  
