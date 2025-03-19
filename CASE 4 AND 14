@@ -4,5 +4,35 @@ List
     .ForEach(c => 
     { 
         c.rid = !string.IsNullOrEmpty(c.granteename) ? "4" : "14";
-        c.Rtype = "auto approved";
+        c.var overrides = new XmlAttributeOverrides();
+var attrs = new XmlAttributes();
+
+// Override LineTypeSet[][] to be treated as LineTypeSet[]
+attrs.XmlArrayItems.Add(new XmlArrayItemAttribute("LineTypeSet", typeof(Pvb.CalcTax.LineTypeSet)));
+
+overrides.Add(typeof(Pvb.CalcTax.ApplicationData), "LineTypes", attrs);
+
+// Now create the XmlSerializer with overrides
+XmlSerializer serializer = new XmlSerializer(item.GetType(), overrides);
+serializer.Serialize(XmlWriter.Create(myStream), item);
+Rtype = "auto approved";
     });
+
+
+
+
+var overrides = new XmlAttributeOverrides();
+var attrs = new XmlAttributes();
+
+// Override LineTypeSet[][] to be treated as LineTypeSet[]
+attrs.XmlArrayItems.Add(new XmlArrayItemAttribute("LineTypeSet", typeof(Pvb.CalcTax.LineTypeSet)));
+
+overrides.Add(typeof(Pvb.CalcTax.ApplicationData), "LineTypes", attrs);
+
+// Now create the XmlSerializer with overrides
+XmlSerializer serializer = new XmlSerializer(item.GetType(), overrides);
+serializer.Serialize(XmlWriter.Create(myStream), item);
+
+
+
+
