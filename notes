@@ -15,18 +15,7 @@ January Release – Completed User Stories for DOA Application
 5. UI Text Update  
    - Implemented a minor text change on the DOA application homepage.  
 
-
-
-January Release – Completed User Stories for DOA Application
-
-1. Fix Duplicate Expiring Notifications
-   - Approvers no longer receive duplicate emails for expiring requests after approval.
-
-2. Consolidate Emails for Terminated Users
-   - Managers now get a single email summarizing all roles of a terminated user instead of multiple notifications.
-
-3. Fix Request Renewal Issue
-   - Resolved unresponsive request renewal issue in the DOA application.
+ request renewal issue in the DOA application.
 
 4. Bulk Sub-Delegation Approval Email Consolidation
    - Bulk approvals now generate a single consolidated email instead of multiple emails.
@@ -61,9 +50,21 @@ March Release – Completed User Stories for DOA Application
    - Enhanced the SSRS report by including additional details to improve data visibility and reporting accuracy. These new data points provide more comprehensive insights, making it easier for stakeholders to analyze key information and make informed decisions. The improved report structure enhances readability, ensuring that critical details are clearly presented for better decision-making.  
 
 3. Fixed Filter Issue for Users with Lead Roles  
-   - Resolved an issue where the filter functionality was not working correctly for users with lead roles. Previously, these users experienced difficulties when trying to refine search results based on specific criteria. The fix ensures that lead users can now apply filters without any issues, allowing for a seamless experience when managing requests and approvals.  
+   - Resolved an issue where the filter functionality was not working correctly for users with lead roles. Previously, these users experienced difficulties when trying to refine 
 
-4. Fixed Bulk Auto-Approval of Requests  
-   - Addressed a problem where bulk auto-approval of requests was not functioning as expected. This issue prevented multiple requests from being processed simultaneously, requiring users to approve them manually. The fix restores the intended functionality, allowing bulk approvals to be executed efficiently, reducing manual workload, and improving overall processing speed.  
 
-These enhancements improve user experience, efficiency, and system reliability within the DOA application.  
+
+
+
+
+// Create XmlAttributeOverrides to ignore LineTypes
+XmlAttributeOverrides overrides = new XmlAttributeOverrides();
+XmlAttributes attrs = new XmlAttributes();
+attrs.XmlIgnore = true;
+
+// Ignore the problematic property in LineItemAPIIType
+overrides.Add(typeof(pvbVertexBatch.CalcTaxSR.LineItemAPIIType), "LineTypes", attrs);
+
+// Now, use XmlSerializer with overrides
+XmlSerializer serializer = new XmlSerializer(item.GetType(), overrides);
+serializer.Serialize(XmlWriter.Create(myStream), item);
