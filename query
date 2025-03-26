@@ -1,0 +1,43 @@
+SELECT DISTINCT 
+    schedules.S_ID, 
+    BL1.B1_Name, 
+    BL2.B2_Name,
+    Transactions.trans_type, 
+    Transactions.trans_sub_type,
+    role.Title AS approver, 
+    schedules.Status,
+
+    -- Count of active subdelegations
+    (SELECT COUNT(Auth_ID) 
+     FROM Requests 
+     WHERE status = 'Active' AND Auth_Id = schedules.S_ID
+    ) AS Subdelegations,
+
+    -- Delegates (Employees assigned to roles linked to this schedule)
+    (SELECT STRING_AGG(CAST(rd.Employee_ID AS NVARCHAR(MAX)), ', ') 
+     FROM RoleDetails rd  
+     INNER JOIN Role ro ON rd.Role_ID = ro.Role_ID  
+     WHERE rd.Status = 1  
+       AND ro.Status = 1  
+       AND rd.Role_ID = role.Role_ID
+    ) AS Delegates,
+
+    -- Grantees (Only included if @granteeIncluded = 1)
+    CASE 
+        WHEN @granteeIncluded = 1 THEN 
+            (SELECT STRING_AGG(CAST(req.Employee_ID AS NVARCHAR(MAX)), ', ') 
+             FROM Requests req  
+             WHERE req.Auth_Id = schedules.S_ID)
+        ELSE NULL 
+    END AS Grantees
+
+FROM Requests req
+INNER JOIN schedules ON req.Auth_id = schedules.S_ID
+INNER JOIN role ON req.role_id = role.Role_ID
+INNER JOIN Transactions ON schedules.trans_typr = Transactions.Trans_typeid
+INNER JOIN Businesslevel BL ON BL.Busid = schedules.Business_level
+INNER JOIN Businesslevel1 BL1 ON BL.Bus1Id = BL1.BL1Id
+INNER JOIN Businesslevel2 BL2 ON BL.Bus2Id = BL2.BL2Id
+LEFT OUTER JOIN employee emp5 ON req.approver = emp5.Id
+
+WHERE schedules.S_ID = @schedule OR @schedule IS NULL;
