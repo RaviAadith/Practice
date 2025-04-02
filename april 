@@ -1,0 +1,19 @@
+CREATE FUNCTION dbo.CleanApproversText(@approverText NVARCHAR(MAX))
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    -- Declare a variable to hold the cleaned text
+    DECLARE @cleanedText NVARCHAR(MAX)
+
+    -- Remove any pattern like (1), (a), (2), etc.
+    SET @cleanedText = @approverText
+    SET @cleanedText = REPLACE(@cleanedText, '(', '') 
+    SET @cleanedText = REPLACE(@cleanedText, ')', '')
+
+    -- Ensure ' & ' and ' or ' are replaced correctly with commas
+    SET @cleanedText = REPLACE(@cleanedText, ' & ', ', ')
+    SET @cleanedText = REPLACE(@cleanedText, ' or ', ', ')
+
+    -- Return the cleaned approvers text
+    RETURN @cleanedText
+END
