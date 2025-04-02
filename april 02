@@ -107,3 +107,34 @@ BEGIN
     RETURN @input;
 END;
 GO
+
+
+
+
+
+
+
+CREATE FUNCTION dbo.FormatApproversString (@input NVARCHAR(MAX))
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    -- Step 1: Remove patterns like (1)(a), (1)(b), ..., (20)(az)
+    WHILE @input LIKE '%([0-9])%([a-z])%'  -- Matching number and letter pairs
+    BEGIN
+        -- Remove the matched patterns
+        SET @input = STUFF(@input, PATINDEX('%([0-9])%([a-z])%', @input), 
+                           CHARINDEX(')', @input, PATINDEX('%([0-9])%([a-z])%', @input)) 
+                           - PATINDEX('%([0-9])%([a-z])%', @input) + 1, '');
+    END;
+
+    -- Step 2: Replace " & " and " or " with ", "
+    SET @input = REPLACE(@input, ' & ', ', ');
+    SET @input = REPLACE(@input, ' or ', ', ');
+
+    -- Step 3: Trim extra spaces
+    SET @input = LTRIM(RTRIM(@input));
+
+    RETURN @input;
+END;
+GO
+
