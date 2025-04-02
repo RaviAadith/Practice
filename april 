@@ -26,3 +26,37 @@ BEGIN
     RETURN @input;
 END;
 GO
+
+
+
+
+
+CREATE FUNCTION dbo.CleanApproversString (@input NVARCHAR(MAX))
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    DECLARE @pattern NVARCHAR(50) = '%([0-9]{1,2})([a-z]{0,2})%'
+
+    -- Step 1: Remove all (number), (number)(letter), (number)(letterletter)
+    WHILE PATINDEX(@pattern, @input) > 0
+    BEGIN
+        SET @input = STUFF(@input, PATINDEX(@pattern, @input), 
+                           CHARINDEX(')', @input, PATINDEX(@pattern, @input) + 1) 
+                           - PATINDEX(@pattern, @input) + 1, '');
+    END
+
+    -- Step 2: Remove remaining parentheses (if any)
+    SET @input = REPLACE(@input, '(', '');
+    SET @input = REPLACE(@input, ')', '');
+
+    -- Step 3: Replace " & " and " or " with ", "
+    SET @input = REPLACE(@input, ' & ', ', ');
+    SET @input = REPLACE(@input, ' or ', ', ');
+
+    -- Step 4: Trim extra spaces
+    SET @input = LTRIM(RTRIM(@input));
+
+    RETURN @input;
+END;
+GO
+
