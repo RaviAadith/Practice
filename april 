@@ -17,3 +17,25 @@ BEGIN
     -- Return the cleaned approvers text
     RETURN @cleanedText
 END
+
+
+
+
+
+CREATE FUNCTION dbo.CleanApproversString (@input NVARCHAR(MAX))
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    -- Step 1: Remove all patterns like (1), (a), (aa), (20)(az)
+    SET @input = REPLACE(REPLACE(REPLACE(@input, '(', ''), ')', ''), '  ', ' ');
+
+    -- Step 2: Replace " & " and " or " with ", "
+    SET @input = REPLACE(@input, ' & ', ', ');
+    SET @input = REPLACE(@input, ' or ', ', ');
+
+    -- Step 3: Trim extra spaces
+    SET @input = LTRIM(RTRIM(@input));
+
+    RETURN @input;
+END;
+GO
